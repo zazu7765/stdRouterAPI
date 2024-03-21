@@ -1,49 +1,98 @@
--- name: create_book :one
+-- name: CreateBook :one
 -- Create a new book
-INSERT INTO books (title, author, publishDate, pageCount, readStatus, collection_id)
+INSERT INTO Books (title, author, publishDate, pageCount, readStatus, collection_id)
 VALUES (?, ?, ?, ?, ?, ?)
 RETURNING id;
 
--- name: get_book_by_id :one
+-- name: GetBookById :one
 -- Retrieve a specific book by ID
-SELECT * FROM books WHERE id = ?;
-
--- name: update_book :exec
--- Update an existing book
-UPDATE books
-SET title = ?, author = ?, publishDate = ?, pageCount = ?, readStatus = ?, collection_id = ?
+SELECT *
+FROM Books
 WHERE id = ?;
 
--- name: add_book_to_collection :exec
+-- name: GetAllBooks :many
+-- List all books
+SELECT *
+FROM Books;
+
+-- name: UpdateBook :exec
+-- Update an existing book
+UPDATE Books
+SET title         = ?,
+    author        = ?,
+    publishDate   = ?,
+    pageCount     = ?,
+    readStatus    = ?,
+    collection_id = ?
+WHERE id = ?;
+
+-- name: MarkBookRead :exec
+-- Mark a book as read
+UPDATE Books
+SET readStatus = 1 -- Assuming 1 represents "read" status, adjust if needed
+WHERE id = ?;
+
+-- name: AddBookToCollection :exec
 -- Add a book to a collection
-UPDATE books
+UPDATE Books
 SET collection_id = ?
 WHERE id = ?;
 
--- name: delete_book :exec
+-- name: DeleteBook :exec
 -- Delete a book
-DELETE FROM books WHERE id = ?;
+DELETE
+FROM Books
+WHERE id = ?;
 
--- name: create_collection :one
+-- name: CreateCollection :one
 -- Create a new collection
-INSERT INTO collections (title)
+INSERT INTO Collections (title)
 VALUES (?)
 RETURNING id;
 
--- name: get_collection_by_id :one
--- Retrieve a specific collection by ID
-SELECT * FROM collections WHERE id = ?;
+-- name: GetAllCollections :many
+-- List all collections
+SELECT *
+FROM Collections;
 
--- name: update_collection :exec
+-- name: GetCollectionById :one
+-- Retrieve a specific collection by ID
+SELECT *
+FROM Collections
+WHERE id = ?;
+
+-- name: UpdateCollection :exec
 -- Update an existing collection
-UPDATE collections
+UPDATE Collections
 SET title = ?
 WHERE id = ?;
 
--- name: delete_collection :exec
+-- name: DeleteCollection :exec
 -- Delete a collection
-DELETE FROM collections WHERE id = ?;
+DELETE
+FROM Collections
+WHERE id = ?;
 
--- name: add_genre :exec
+-- name: GetAllGenres :many
+-- List all genres
+SELECT *
+FROM Genres;
+
+-- name: AddGenre :one
 -- Add a genre if it doesn't exist
-INSERT OR IGNORE INTO Genres (name) VALUES (?);
+INSERT OR IGNORE INTO Genres (name)
+VALUES (?)
+RETURNING ID;
+
+-- name: AssociateBookWithGenre :exec
+-- Associate a book with a genre
+INSERT INTO BookGenres (book_id, genre_id)
+VALUES (?, ?);
+
+-- name: GetBookWithGenres :one
+-- Retrieve a book and its associated genres
+SELECT b.*, g.*
+FROM Books b
+         JOIN BookGenres bg ON b.id = bg.book_id
+         JOIN Genres g ON bg.genre_id = g.id
+WHERE b.id = ?;
