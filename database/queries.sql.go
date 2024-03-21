@@ -243,7 +243,7 @@ func (q *Queries) GetBookById(ctx context.Context, id int64) (Book, error) {
 }
 
 const getBookWithGenres = `-- name: GetBookWithGenres :one
-SELECT b.id, b.title, b.author, b.publishdate, b.pagecount, b.readstatus, b.collection_id, g.id, g.name
+SELECT b.id, b.title, b.author, b.publishdate, b.pagecount, b.readstatus, b.collection_id, g.name
 FROM Books b
          JOIN BookGenres bg ON b.id = bg.book_id
          JOIN Genres g ON bg.genre_id = g.id
@@ -258,7 +258,6 @@ type GetBookWithGenresRow struct {
 	Pagecount    sql.NullInt64
 	Readstatus   sql.NullInt64
 	CollectionID sql.NullInt64
-	ID_2         int64
 	Name         string
 }
 
@@ -274,7 +273,6 @@ func (q *Queries) GetBookWithGenres(ctx context.Context, id int64) (GetBookWithG
 		&i.Pagecount,
 		&i.Readstatus,
 		&i.CollectionID,
-		&i.ID_2,
 		&i.Name,
 	)
 	return i, err

@@ -91,7 +91,7 @@ VALUES (?, ?);
 
 -- name: GetBookWithGenres :one
 -- Retrieve a book and its associated genres
-SELECT b.*, g.*
+SELECT b.*, g.name
 FROM Books b
          JOIN BookGenres bg ON b.id = bg.book_id
          JOIN Genres g ON bg.genre_id = g.id
