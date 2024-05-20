@@ -14,3 +14,4 @@
 go.work
 # ignore jetbrains files
 .idea/
+*.sqlite
