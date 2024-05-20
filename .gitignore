@@ -1,3 +1,8 @@
+# ignore binary files
+*
+!/**/
+!*.*
+# ignore exe files and library files
 *.exe
 *.exe~
 *.dll
@@ -5,4 +10,7 @@
 *.dylib
 *.test
 *.out
+# ignore go workspace files
 go.work
+# ignore jetbrains files
+.idea/

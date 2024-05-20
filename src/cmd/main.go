@@ -4,10 +4,13 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
-	_ "github.com/mattn/go-sqlite3"
-	"github.com/zazu7765/stdRouterAPI/database"
 	"log"
+	"net/http"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/zazu7765/stdRouterAPI/src/internal/database"
+	"github.com/zazu7765/stdRouterAPI/src/internal/server"
 )
 
 // The heresy of sinners will fall to the power of time.DateOnly
@@ -18,7 +21,7 @@ func formatPublishDate(str string) time.Time {
 
 // Embeded SQL file as a string to upload to database
 //
-//go:embed schema.sql
+//go:embed sql/schema.sql
 var schema string
 
 func run() error {
@@ -112,4 +115,17 @@ func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
+	routes := []server.Route{}
+	route1 := server.Route{
+		Name:    "HelloWorld",
+		Method:  "GET",
+		Pattern: "/hello",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			log.Println("Hello World Request")
+			w.Write([]byte("Hello World!"))
+		},
+	}
+	routes = append(routes, route1)
+	log.Println("Starting REST Server on :8080")
+	log.Fatal(http.ListenAndServe(":8080", server.NewRouter(routes)))
 }
