@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/zazu7765/stdRouterAPI/src/internal/database"
 	"github.com/zazu7765/stdRouterAPI/src/internal/server"
+	_ "modernc.org/sqlite"
 )
 
 // The heresy of sinners will fall to the power of time.DateOnly
@@ -24,10 +24,14 @@ func formatPublishDate(str string) time.Time {
 //go:embed sql/schema.sql
 var schema string
 
+func populateDB(q *database.Queries) {
+
+}
+
 func run() error {
 	ctx := context.Background()
 	// Temporary memory database for testing
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		return err
 	}

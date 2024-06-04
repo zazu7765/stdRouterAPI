@@ -13,3 +13,21 @@ Models a bookshelf:
   - Books
 
 Queries will be generated using `sqlc`, while the API itself will be implemented using `net/http` 
+
+
+## Setup (Mac/Linux only)
+1. Make all scripts executable (`chmod +x`)
+2. run `run_all.sh`
+  - If you want to only rebuild, run `build.sh`
+  - To run after building, run `./bin/stdRouterApi`
+  - If you accidentally deleted something or uninstalled a dependency, run `bootstrap.sh`
+
+## Setup (Windows)
+Make sure that the bin directory exists under this project folder!
+```bash
+go install github.com/kyleconroy/sqlc/cmd/sqlc@latest
+sqlc generate -f src/configs/sqlc.yaml
+go mod tidy
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/zygmuntz/goodbooks-10k/master/samples/books.csv -OutFile src\configs\books.csv
+go build -o bin/stdRouterApi ./src/cmd/main.go
+```
