@@ -28,6 +28,5 @@ Make sure that the bin directory exists under this project folder!
 go install github.com/kyleconroy/sqlc/cmd/sqlc@latest
 sqlc generate -f src/configs/sqlc.yaml
 go mod tidy
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/zygmuntz/goodbooks-10k/master/samples/books.csv -OutFile src\configs\books.csv
 go build -o bin/stdRouterApi ./src/cmd/main.go
 ```

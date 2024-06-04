@@ -1,6 +1,6 @@
 -- name: CreateBook :one
 -- Create a new book
-INSERT INTO Books (title, author, publishDate, pageCount, readStatus, collection_id)
+INSERT INTO Books (title, author, publishDate, isbn, readStatus, collection_id)
 VALUES (?, ?, ?, ?, ?, ?)
 RETURNING id;
 
@@ -21,7 +21,7 @@ UPDATE Books
 SET title         = ?,
     author        = ?,
     publishDate   = ?,
-    pageCount     = ?,
+    isbn     = ?,
     readStatus    = ?,
     collection_id = ?
 WHERE id = ?;
@@ -80,9 +80,10 @@ FROM Genres;
 
 -- name: AddGenre :one
 -- Add a genre if it doesn't exist
-INSERT OR IGNORE INTO Genres (name)
+INSERT INTO Genres (name)
 VALUES (?)
-RETURNING ID;
+ON CONFLICT(name) DO NOTHING
+RETURNING id;
 
 -- name: AssociateBookWithGenre :exec
 -- Associate a book with a genre

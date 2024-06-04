@@ -1,30 +1,26 @@
-CREATE TABLE Books
-(
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    title         TEXT NOT NULL,
-    author        TEXT NOT NULL,
-    publishDate   DATETIME,
-    pageCount     INTEGER,
-    readStatus    INTEGER,
+CREATE TABLE Books (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    author TEXT NOT NULL,
+    publishDate DATETIME,
+    isbn TEXT NOT NULL,
+    readStatus INTEGER,
     collection_id INTEGER,
     FOREIGN KEY (collection_id) REFERENCES Collections (id)
 );
 
-CREATE TABLE Collections
-(
-    id    INTEGER PRIMARY KEY AUTOINCREMENT,
+CREATE TABLE Collections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL
 );
 
-CREATE TABLE Genres
-(
-    id   INTEGER PRIMARY KEY,
+CREATE TABLE Genres (
+    id INTEGER PRIMARY KEY,
     name TEXT NOT NULL UNIQUE
 );
 
-CREATE TABLE BookGenres
-(
-    book_id  INTEGER,
+CREATE TABLE BookGenres (
+    book_id INTEGER,
     genre_id INTEGER,
     FOREIGN KEY (book_id) REFERENCES Books (id),
     FOREIGN KEY (genre_id) REFERENCES Genres (id),

@@ -4,19 +4,35 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"encoding/csv"
+	"fmt"
 	"log"
-	"net/http"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/zazu7765/stdRouterAPI/src/internal/database"
-	"github.com/zazu7765/stdRouterAPI/src/internal/server"
 	_ "modernc.org/sqlite"
 )
 
 // The heresy of sinners will fall to the power of time.DateOnly
-func formatPublishDate(str string) time.Time {
-	date, _ := time.Parse(time.DateOnly, str)
-	return date
+func formatPublishDate(str string) (time.Time, error) {
+	str2 := strings.Split(str, ".")
+	if len(str) < 1 {
+		fmt.Println("Str has 2 parts")
+	}
+
+	intstr, err := strconv.ParseUint(str2[0], 10, 16)
+	if err != nil {
+		return time.Now(), err
+	}
+
+	// fmt.Println(intstr)
+	date := time.Date(int(intstr), 1, 1, 0, 0, 0, 0, time.UTC)
+	// fmt.Println(date)
+	return date, nil
 }
 
 // Embeded SQL file as a string to upload to database
@@ -24,11 +40,77 @@ func formatPublishDate(str string) time.Time {
 //go:embed sql/schema.sql
 var schema string
 
-func populateDB(q *database.Queries) {
+func populateDB(ctx context.Context, q *database.Queries, f string) error {
+	file, err := os.Open(f)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
 
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = -1
+
+	reader.Read()
+
+	records, err := reader.ReadAll()
+	if err != nil {
+		return err
+	}
+
+	for _, record := range records {
+		title := record[0]
+		authors := record[1]
+		publish_date := record[2]
+		ISBN := record[3]
+		genre := record[4]
+		date, err := formatPublishDate(publish_date)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		pDate := sql.NullTime{
+			Time:  date,
+			Valid: true,
+		}
+		bookfields := database.CreateBookParams{
+			Title:       title,
+			Author:      authors,
+			Publishdate: pDate,
+			Isbn:        ISBN,
+			Readstatus: sql.NullInt64{
+				Int64: 0,
+				Valid: true,
+			},
+			CollectionID: sql.NullInt64{
+				Valid: false,
+			},
+		}
+		_, err = q.CreateBook(ctx, bookfields)
+		if err != nil {
+			return err
+		}
+
+		genreSplit := strings.Split(genre, ",")
+		for _, g := range genreSplit {
+			gid, err := q.AddGenre(ctx, g)
+			if err != nil {
+				log.Println(err)
+				log.Println("Adding Genre: ", gid)
+			}
+			// err = q.AssociateBookWithGenre(ctx, database.AssociateBookWithGenreParams{
+			// 	BookID:  sql.NullInt64{Int64: b, Valid: true},
+			// 	GenreID: sql.NullInt64{Int64: g, Valid: true},
+			// })
+			// if err != nil {
+			// 	return err
+			// }
+		}
+	}
+	return nil
 }
 
 func run() error {
+	filePath := filepath.Join("src", "configs", "books.csv")
 	ctx := context.Background()
 	// Temporary memory database for testing
 	db, err := sql.Open("sqlite", ":memory:")
@@ -44,6 +126,10 @@ func run() error {
 	// Create queries instance
 	queries := database.New(db)
 
+	err = populateDB(ctx, queries, filePath)
+	if err != nil {
+		return err
+	}
 	// Get all books (should return empty)
 	books, err := queries.GetAllBooks(ctx)
 	if err != nil {
@@ -52,17 +138,15 @@ func run() error {
 	log.Println(books)
 
 	// Add book to database (Associate Genres later) (Will Probably wrapper function this)
+	timeBook, _ := formatPublishDate("2012-06-05")
 	addedBook, err := queries.CreateBook(ctx, database.CreateBookParams{
 		Title:  "Ready Player One",
 		Author: "Ernest Cline",
 		Publishdate: sql.NullTime{
-			Time:  formatPublishDate("2012-06-05"),
+			Time:  timeBook,
 			Valid: true,
 		},
-		Pagecount: sql.NullInt64{
-			Int64: 384,
-			Valid: true,
-		},
+		Isbn: "0307887448",
 		Readstatus: sql.NullInt64{
 			Int64: 0,
 			Valid: true,
@@ -119,17 +203,17 @@ func main() {
 	if err := run(); err != nil {
 		log.Fatal(err)
 	}
-	routes := []server.Route{}
-	route1 := server.Route{
-		Name:    "HelloWorld",
-		Method:  "GET",
-		Pattern: "/hello",
-		Handler: func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Hello World Request")
-			w.Write([]byte("Hello World!"))
-		},
-	}
-	routes = append(routes, route1)
-	log.Println("Starting REST Server on :8080")
-	log.Fatal(http.ListenAndServe(":8080", server.NewRouter(routes)))
+	// routes := []server.Route{}
+	// route1 := server.Route{
+	// 	Name:    "HelloWorld",
+	// 	Method:  "GET",
+	// 	Pattern: "/hello",
+	// 	Handler: func(w http.ResponseWriter, r *http.Request) {
+	// 		log.Println("Hello World Request")
+	// 		w.Write([]byte("Hello World!"))
+	// 	},
+	// }
+	// routes = append(routes, route1)
+	// log.Println("Starting REST Server on :8080")
+	// log.Fatal(http.ListenAndServe(":8080", server.NewRouter(routes)))
 }

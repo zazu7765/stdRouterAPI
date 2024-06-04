@@ -20,14 +20,4 @@ echo "Fetching Go dependencies..."
 go mod tidy
 echo 
 
-echo "Discovering sample files..."
-FILE="src/configs/books.csv"
-if [ ! -f "$FILE" ]; then
-    echo "books.csv not found. Downloading..."
-    mkdir -p src/configs
-    curl https://raw.githubusercontent.com/zygmuntz/goodbooks-10k/master/samples/books.csv -s -o "$FILE"
-else
-    echo "books.csv found! Proceeding to next step..."
-fi
-
 echo "Bootstrap completed."
