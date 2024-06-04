@@ -78,6 +78,13 @@ WHERE id = ?;
 SELECT *
 FROM Genres;
 
+-- name: GetGenreByName :one
+-- Get Genre By Name
+SELECT *
+FROM Genres
+WHERE name LIKE ?
+LIMIT 1;
+
 -- name: AddGenre :one
 -- Add a genre if it doesn't exist
 INSERT INTO Genres (name)
@@ -92,8 +99,9 @@ VALUES (?, ?);
 
 -- name: GetBookWithGenres :one
 -- Retrieve a book and its associated genres
-SELECT b.*, g.name
+SELECT b.*, GROUP_CONCAT(g.name) AS genres
 FROM Books b
-         JOIN BookGenres bg ON b.id = bg.book_id
-         JOIN Genres g ON bg.genre_id = g.id
-WHERE b.id = ?;
+JOIN BookGenres bg ON b.id = bg.book_id
+JOIN Genres g ON bg.genre_id = g.id
+WHERE b.id = ?
+GROUP BY b.id;

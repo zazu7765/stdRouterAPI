@@ -7,6 +7,7 @@ import (
 	"encoding/csv"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"github.com/zazu7765/stdRouterAPI/src/internal/database"
+	"github.com/zazu7765/stdRouterAPI/src/internal/server"
 	_ "modernc.org/sqlite"
 )
 
@@ -57,6 +59,7 @@ func populateDB(ctx context.Context, q *database.Queries, f string) error {
 		return err
 	}
 
+	log.Println("Loading Records from books.csv...")
 	for _, record := range records {
 		title := record[0]
 		authors := record[1]
@@ -85,42 +88,43 @@ func populateDB(ctx context.Context, q *database.Queries, f string) error {
 				Valid: false,
 			},
 		}
-		_, err = q.CreateBook(ctx, bookfields)
+		b, err := q.CreateBook(ctx, bookfields)
 		if err != nil {
 			return err
 		}
 
 		genreSplit := strings.Split(genre, ",")
 		for _, g := range genreSplit {
-			gid, err := q.AddGenre(ctx, g)
+			q.AddGenre(ctx, g)
+			gid, err := q.GetGenreByName(ctx, g)
 			if err != nil {
 				log.Println(err)
-				log.Println("Adding Genre: ", gid)
 			}
-			// err = q.AssociateBookWithGenre(ctx, database.AssociateBookWithGenreParams{
-			// 	BookID:  sql.NullInt64{Int64: b, Valid: true},
-			// 	GenreID: sql.NullInt64{Int64: g, Valid: true},
-			// })
-			// if err != nil {
-			// 	return err
-			// }
+			// fmt.Println("Genre ID: ", gid)
+			err = q.AssociateBookWithGenre(ctx, database.AssociateBookWithGenreParams{
+				BookID:  sql.NullInt64{Int64: b, Valid: true},
+				GenreID: sql.NullInt64{Int64: gid.ID, Valid: true},
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func run() error {
+func run() (*http.ServeMux, error) {
 	filePath := filepath.Join("src", "configs", "books.csv")
 	ctx := context.Background()
 	// Temporary memory database for testing
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Set tables through schema file
 	if _, err := db.ExecContext(ctx, schema); err != nil {
-		return err
+		return nil, err
 	}
 
 	// Create queries instance
@@ -128,92 +132,36 @@ func run() error {
 
 	err = populateDB(ctx, queries, filePath)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Get all books (should return empty)
 	books, err := queries.GetAllBooks(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	log.Println(books)
-
-	// Add book to database (Associate Genres later) (Will Probably wrapper function this)
-	timeBook, _ := formatPublishDate("2012-06-05")
-	addedBook, err := queries.CreateBook(ctx, database.CreateBookParams{
-		Title:  "Ready Player One",
-		Author: "Ernest Cline",
-		Publishdate: sql.NullTime{
-			Time:  timeBook,
-			Valid: true,
+	for _, book := range books {
+		bookWGenres, _ := queries.GetBookWithGenres(ctx, book.ID)
+		fmt.Println(bookWGenres)
+	}
+	routes := []server.Route{}
+	route1 := server.Route{
+		Name:    "HelloWorld",
+		Method:  "GET",
+		Pattern: "/hello",
+		Handler: func(w http.ResponseWriter, r *http.Request) {
+			log.Println("Hello World Request")
+			w.Write([]byte("Hello World!"))
 		},
-		Isbn: "0307887448",
-		Readstatus: sql.NullInt64{
-			Int64: 0,
-			Valid: true,
-		},
-		CollectionID: sql.NullInt64{
-			Valid: false,
-		},
-	})
-	if err != nil {
-		return err
 	}
-	log.Println(addedBook)
-
-	// Get book by ID from database
-	retrievedBook, err := queries.GetBookById(ctx, addedBook)
-	if err != nil {
-		return err
-	}
-
-	log.Println(retrievedBook)
-
-	// Get All Genres from database (should be empty)
-	genreList, err := queries.GetAllGenres(ctx)
-	if err != nil {
-		return err
-	}
-	log.Println(genreList)
-
-	// Add Genre option to database
-	createdGenre, err := queries.AddGenre(ctx, "Science Fiction")
-	if err != nil {
-		return err
-	}
-
-	// Associate Genre to Book and vice versa in join table
-	err = queries.AssociateBookWithGenre(ctx, database.AssociateBookWithGenreParams{
-		BookID:  sql.NullInt64{Int64: retrievedBook.ID, Valid: true},
-		GenreID: sql.NullInt64{Int64: createdGenre, Valid: true},
-	})
-	if err != nil {
-		return err
-	}
-
-	// Return book with genre, not in a struct yet just as a row which means I will probably wrap my own struct
-	book, err := queries.GetBookWithGenres(ctx, addedBook)
-	if err != nil {
-		return err
-	}
-	log.Println(book)
-	return nil
+	routes = append(routes, route1)
+	log.Println("Starting REST Server on :8080")
+	return server.NewRouter(routes), nil
 }
 
 func main() {
-	if err := run(); err != nil {
+	s, err := run()
+	if err != nil {
 		log.Fatal(err)
 	}
-	// routes := []server.Route{}
-	// route1 := server.Route{
-	// 	Name:    "HelloWorld",
-	// 	Method:  "GET",
-	// 	Pattern: "/hello",
-	// 	Handler: func(w http.ResponseWriter, r *http.Request) {
-	// 		log.Println("Hello World Request")
-	// 		w.Write([]byte("Hello World!"))
-	// 	},
-	// }
-	// routes = append(routes, route1)
-	// log.Println("Starting REST Server on :8080")
-	// log.Fatal(http.ListenAndServe(":8080", server.NewRouter(routes)))
+	log.Fatal(http.ListenAndServe(":8080", s))
 }
