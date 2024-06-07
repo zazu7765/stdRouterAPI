@@ -52,7 +52,10 @@ func populateDB(ctx context.Context, q *database.Queries, f string) error {
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = -1
 
-	reader.Read()
+	_, err = reader.Read()
+	if err != nil {
+		return err
+	}
 
 	records, err := reader.ReadAll()
 	if err != nil {
@@ -63,10 +66,10 @@ func populateDB(ctx context.Context, q *database.Queries, f string) error {
 	for _, record := range records {
 		title := record[0]
 		authors := record[1]
-		publish_date := record[2]
+		publishDate := record[2]
 		ISBN := record[3]
 		genre := record[4]
-		date, err := formatPublishDate(publish_date)
+		date, err := formatPublishDate(publishDate)
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -143,17 +146,20 @@ func run() (*http.ServeMux, error) {
 		bookWGenres, _ := queries.GetBookWithGenres(ctx, book.ID)
 		fmt.Println(bookWGenres)
 	}
-	routes := []server.Route{}
-	route1 := server.Route{
-		Name:    "HelloWorld",
-		Method:  "GET",
-		Pattern: "/hello",
-		Handler: func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Hello World Request")
-			w.Write([]byte("Hello World!"))
+	routes := []server.Route{
+		{
+			Name:    "Ping",
+			Method:  "GET",
+			Pattern: "/ping",
+			Handler: func(w http.ResponseWriter, r *http.Request) {
+				log.Println("Ping Request")
+				_, err := w.Write([]byte("Pong"))
+				if err != nil {
+					log.Println("Error writing response:", err)
+				}
+			},
 		},
 	}
-	routes = append(routes, route1)
 	log.Println("Starting REST Server on :8080")
 	return server.NewRouter(routes), nil
 }
