@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	_ "embed"
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
+	books "github.com/zazu7765/stdRouterAPI/src/internal/app/books"
 	"log"
 	"net/http"
 	"os"
@@ -99,7 +99,7 @@ func populateDB(ctx context.Context, q *database.Queries, f string) error {
 
 		genreSplit := strings.Split(genre, ",")
 		for _, g := range genreSplit {
-			q.AddGenre(ctx, g)
+			_, _ = q.AddGenre(ctx, g)
 			gid, err := q.GetGenreByName(ctx, g)
 			if err != nil {
 				log.Println(err)
@@ -138,15 +138,6 @@ func run() (*http.ServeMux, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Get all books (should return empty)
-	books, err := queries.GetAllBooks(ctx)
-	if err != nil {
-		return nil, err
-	}
-	for _, book := range books {
-		bookWGenres, _ := queries.GetBookWithGenres(ctx, book.ID)
-		fmt.Println(bookWGenres)
-	}
 	routes := []server.Route{
 		{
 			Name:    "Ping",
@@ -164,23 +155,7 @@ func run() (*http.ServeMux, error) {
 			Name:    "GetAllBooks",
 			Method:  "GET",
 			Pattern: "/GetAllBooks",
-			//TODO: move function into internal/app/books
-			Handler: func(w http.ResponseWriter, r *http.Request) {
-				log.Println("GetAllBooks Request")
-				books, err := queries.GetAllBooks(ctx)
-				if err != nil {
-					log.Println(err)
-				}
-				// TODO: create struct to hide unnecessary fields and send request through there instead
-				payload, err := json.Marshal(books)
-				if err != nil {
-					log.Println("Error marshalling payload:", err)
-				}
-				_, err = w.Write(payload)
-				if err != nil {
-					log.Println("Error writing response:", err)
-				}
-			},
+			Handler: books.GetBooks(queries, ctx),
 		},
 	}
 	log.Println("Starting REST Server on :8080")
