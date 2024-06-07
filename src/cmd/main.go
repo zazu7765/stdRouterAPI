@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -154,6 +155,28 @@ func run() (*http.ServeMux, error) {
 			Handler: func(w http.ResponseWriter, r *http.Request) {
 				log.Println("Ping Request")
 				_, err := w.Write([]byte("Pong"))
+				if err != nil {
+					log.Println("Error writing response:", err)
+				}
+			},
+		},
+		{
+			Name:    "GetAllBooks",
+			Method:  "GET",
+			Pattern: "/GetAllBooks",
+			//TODO: move function into internal/app/books
+			Handler: func(w http.ResponseWriter, r *http.Request) {
+				log.Println("GetAllBooks Request")
+				books, err := queries.GetAllBooks(ctx)
+				if err != nil {
+					log.Println(err)
+				}
+				// TODO: create struct to hide unnecessary fields and send request through there instead
+				payload, err := json.Marshal(books)
+				if err != nil {
+					log.Println("Error marshalling payload:", err)
+				}
+				_, err = w.Write(payload)
 				if err != nil {
 					log.Println("Error writing response:", err)
 				}
