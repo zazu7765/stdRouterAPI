@@ -11,16 +11,29 @@ import (
 func GetBooks(queries *database.Queries, ctx context.Context) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log.Println("GetAllBooks Request")
-		books, err := queries.GetAllBooks(ctx)
+		res := BookResponseList{}
+		query, err := queries.GetAllBooks(ctx)
 		if err != nil {
 			log.Println(err)
+			res.Status = http.StatusInternalServerError
 		}
-		// TODO: create struct to hide unnecessary fields and send request through there instead
-		payload, err := json.Marshal(books)
+		books := make([]BookResponse, len(query))
+		for i, q := range query {
+			b := CreateBookResponse(q)
+			books[i] = b
+		}
+
+		res.Results = books
+		res.Status = http.StatusOK
+		response, err := json.Marshal(res)
 		if err != nil {
 			log.Println("Error marshalling payload:", err)
+			res.Status = http.StatusInternalServerError
+			res.Results = nil
 		}
-		_, err = w.Write(payload)
+
+		response, err = json.Marshal(res)
+		_, err = w.Write(response)
 		if err != nil {
 			log.Println("Error writing response:", err)
 		}
